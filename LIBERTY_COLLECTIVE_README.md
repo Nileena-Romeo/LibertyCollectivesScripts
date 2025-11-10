@@ -483,7 +483,7 @@ To improve these assets:
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 1.0 | 2025-04-11 | Initial release |
+| 1.0 | 2025-04-6 | Initial release |
 
 ---
 
