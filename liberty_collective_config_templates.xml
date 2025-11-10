@@ -1,0 +1,571 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    WebSphere Liberty Collective Configuration Templates
+    
+    This file contains reference configurations for Liberty Collective
+    controllers and members. Use these templates as a starting point
+    for your collective setup.
+    
+    Author: IBM Support
+    Version: 1.0
+    Date: 2025-04-11
+-->
+
+<!-- ========================================================================
+     COLLECTIVE CONTROLLER CONFIGURATION
+     ======================================================================== -->
+
+<!--
+    Minimum Controller Configuration
+    
+    This is the minimal configuration required for a collective controller.
+    Copy this to your controller's server.xml file.
+-->
+<server description="Collective Controller - Minimal Configuration">
+
+    <!-- Feature Manager -->
+    <featureManager>
+        <!-- Core collective features -->
+        <feature>collectiveController-1.0</feature>
+        <feature>adminCenter-1.0</feature>
+        <feature>restConnector-2.0</feature>
+        
+        <!-- Security features -->
+        <feature>ssl-1.0</feature>
+        <feature>appSecurity-2.0</feature>
+        
+        <!-- Optional: For JSP support in Admin Center -->
+        <feature>jsp-2.3</feature>
+    </featureManager>
+
+    <!-- HTTP Endpoint Configuration -->
+    <httpEndpoint id="defaultHttpEndpoint"
+                  host="*"
+                  httpPort="9080"
+                  httpsPort="9443">
+        <tcpOptions soReuseAddr="true"/>
+        <httpOptions maxKeepAliveRequests="1000"/>
+    </httpEndpoint>
+
+    <!-- Collective Controller Configuration -->
+    <collectiveController>
+        <!-- Timeout for collective operations (default: 180s) -->
+        <timeout>300s</timeout>
+    </collectiveController>
+
+    <!-- Basic User Registry -->
+    <basicRegistry id="basic" realm="BasicRealm">
+        <!-- Default admin user (change password!) -->
+        <user name="admin" password="{xor}Lz4sLCgwLTs="/>
+        <!-- Add more users as needed -->
+    </basicRegistry>
+
+    <!-- Administrator Role -->
+    <administrator-role>
+        <user>admin</user>
+    </administrator-role>
+
+    <!-- Keystore Configuration -->
+    <keyStore id="defaultKeyStore" 
+              password="{xor}Lz4sLCgwLTs="
+              type="PKCS12"/>
+
+    <!-- SSL Configuration -->
+    <ssl id="defaultSSLConfig" 
+         keyStoreRef="defaultKeyStore" 
+         trustStoreRef="defaultTrustStore"
+         sslProtocol="TLSv1.2"/>
+
+    <!-- Trust Store -->
+    <keyStore id="defaultTrustStore"
+              location="resources/security/trust.p12"
+              password="{xor}Lz4sLCgwLTs="
+              type="PKCS12"/>
+
+    <!-- Logging Configuration -->
+    <logging traceSpecification="*=info"
+             maxFileSize="20"
+             maxFiles="10"
+             traceFormat="BASIC"/>
+
+</server>
+
+<!-- ========================================================================
+     COLLECTIVE CONTROLLER - PRODUCTION CONFIGURATION
+     ======================================================================== -->
+
+<!--
+    Production Controller Configuration
+    
+    This configuration includes additional settings for production environments
+    including LDAP integration, enhanced security, and performance tuning.
+-->
+<server description="Collective Controller - Production Configuration">
+
+    <!-- Feature Manager -->
+    <featureManager>
+        <!-- Core collective features -->
+        <feature>collectiveController-1.0</feature>
+        <feature>adminCenter-1.0</feature>
+        <feature>restConnector-2.0</feature>
+        
+        <!-- Security features -->
+        <feature>ssl-1.0</feature>
+        <feature>appSecurity-3.0</feature>
+        <feature>ldapRegistry-3.0</feature>
+        
+        <!-- Monitoring features -->
+        <feature>monitor-1.0</feature>
+        <feature>mpMetrics-2.3</feature>
+        
+        <!-- Optional features -->
+        <feature>jsp-2.3</feature>
+        <feature>json-1.0</feature>
+    </featureManager>
+
+    <!-- HTTP Endpoint Configuration -->
+    <httpEndpoint id="defaultHttpEndpoint"
+                  host="*"
+                  httpPort="-1"
+                  httpsPort="9443">
+        <tcpOptions soReuseAddr="true"/>
+        <httpOptions maxKeepAliveRequests="1000"
+                     persistTimeout="30s"/>
+        <!-- Access logging -->
+        <accessLogging filepath="${server.output.dir}/logs/http_access.log"
+                      logFormat='%h %u %t "%r" %s %b'
+                      maxFileSize="100"
+                      maxFiles="10"/>
+    </httpEndpoint>
+
+    <!-- Collective Controller Configuration -->
+    <collectiveController>
+        <timeout>300s</timeout>
+    </collectiveController>
+
+    <!-- LDAP User Registry -->
+    <ldapRegistry id="ldap" 
+                  realm="LDAPRealm"
+                  host="ldap.example.com" 
+                  port="636"
+                  ldapType="IBM Tivoli Directory Server"
+                  baseDN="dc=example,dc=com"
+                  bindDN="cn=admin,dc=example,dc=com"
+                  bindPassword="{xor}encoded_password"
+                  sslEnabled="true"
+                  sslRef="ldapSSLConfig">
+        <idsFilters
+            userFilter="(&(uid=%v)(objectclass=inetOrgPerson))"
+            groupFilter="(&(cn=%v)(objectclass=groupOfUniqueNames))"
+            userIdMap="*:uid"
+            groupIdMap="*:cn"
+            groupMemberIdMap="groupOfUniqueNames:uniqueMember"/>
+    </ldapRegistry>
+
+    <!-- LDAP SSL Configuration -->
+    <ssl id="ldapSSLConfig"
+         keyStoreRef="defaultKeyStore"
+         trustStoreRef="ldapTrustStore"
+         sslProtocol="TLSv1.2"/>
+
+    <keyStore id="ldapTrustStore"
+              location="resources/security/ldap_trust.p12"
+              password="{xor}encoded_password"
+              type="PKCS12"/>
+
+    <!-- Administrator Role -->
+    <administrator-role>
+        <user>admin</user>
+        <group>AdminGroup</group>
+    </administrator-role>
+
+    <!-- Keystore Configuration -->
+    <keyStore id="defaultKeyStore" 
+              password="{xor}encoded_password"
+              type="PKCS12"/>
+
+    <!-- SSL Configuration -->
+    <ssl id="defaultSSLConfig" 
+         keyStoreRef="defaultKeyStore" 
+         trustStoreRef="defaultTrustStore"
+         sslProtocol="TLSv1.2"
+         clientAuthenticationSupported="true"/>
+
+    <keyStore id="defaultTrustStore"
+              location="resources/security/trust.p12"
+              password="{xor}encoded_password"
+              type="PKCS12"/>
+
+    <!-- Thread Pool Configuration -->
+    <executor name="LibertyExecutor"
+              coreThreads="50"
+              maxThreads="100"
+              keepAlive="60s"
+              stealPolicy="STRICT"
+              rejectedWorkPolicy="CALLER_RUNS"/>
+
+    <!-- Connection Manager -->
+    <connectionManager id="defaultConnectionManager"
+                      maxPoolSize="50"
+                      minPoolSize="10"
+                      connectionTimeout="30s"
+                      maxIdleTime="30m"
+                      reapTime="3m"
+                      agedTimeout="0"/>
+
+    <!-- Logging Configuration -->
+    <logging traceSpecification="*=info:com.ibm.ws.collective.*=fine"
+             maxFileSize="50"
+             maxFiles="20"
+             traceFormat="ENHANCED"
+             consoleLogLevel="INFO"
+             copySystemStreams="true"/>
+
+    <!-- Monitoring -->
+    <monitor filter="JVM,ThreadPool,WebContainer,Session,ConnectionPool"/>
+
+</server>
+
+<!-- ========================================================================
+     COLLECTIVE MEMBER CONFIGURATION
+     ======================================================================== -->
+
+<!--
+    Minimum Member Configuration
+    
+    This is the minimal configuration required for a collective member.
+    Copy this to your member's server.xml file.
+-->
+<server description="Collective Member - Minimal Configuration">
+
+    <!-- Feature Manager -->
+    <featureManager>
+        <!-- Core collective feature -->
+        <feature>collectiveMember-1.0</feature>
+        
+        <!-- Security features -->
+        <feature>ssl-1.0</feature>
+        
+        <!-- Add your application features here -->
+        <feature>servlet-4.0</feature>
+        <feature>jaxrs-2.1</feature>
+    </featureManager>
+
+    <!-- HTTP Endpoint Configuration -->
+    <httpEndpoint id="defaultHttpEndpoint"
+                  host="*"
+                  httpPort="9080"
+                  httpsPort="9443">
+        <tcpOptions soReuseAddr="true"/>
+    </httpEndpoint>
+
+    <!-- Collective Member Configuration -->
+    <collectiveMember>
+        <!-- Controller connection details -->
+        <controllerHost>controller.example.com</controllerHost>
+        <controllerHttpsPort>9443</controllerHttpsPort>
+    </collectiveMember>
+
+    <!-- Keystore Configuration -->
+    <keyStore id="defaultKeyStore" 
+              password="{xor}Lz4sLCgwLTs="
+              type="PKCS12"/>
+
+    <!-- SSL Configuration -->
+    <ssl id="defaultSSLConfig" 
+         keyStoreRef="defaultKeyStore" 
+         trustStoreRef="defaultTrustStore"
+         sslProtocol="TLSv1.2"/>
+
+    <!-- Trust Store (must include controller certificate) -->
+    <keyStore id="defaultTrustStore"
+              location="resources/security/trust.p12"
+              password="{xor}Lz4sLCgwLTs="
+              type="PKCS12"/>
+
+    <!-- Logging Configuration -->
+    <logging traceSpecification="*=info"
+             maxFileSize="20"
+             maxFiles="10"/>
+
+</server>
+
+<!-- ========================================================================
+     COLLECTIVE MEMBER - PRODUCTION CONFIGURATION
+     ======================================================================== -->
+
+<!--
+    Production Member Configuration
+    
+    This configuration includes additional settings for production environments.
+-->
+<server description="Collective Member - Production Configuration">
+
+    <!-- Feature Manager -->
+    <featureManager>
+        <!-- Core collective feature -->
+        <feature>collectiveMember-1.0</feature>
+        
+        <!-- Security features -->
+        <feature>ssl-1.0</feature>
+        <feature>appSecurity-3.0</feature>
+        
+        <!-- Application features -->
+        <feature>servlet-4.0</feature>
+        <feature>jaxrs-2.1</feature>
+        <feature>cdi-2.0</feature>
+        <feature>jpa-2.2</feature>
+        <feature>jdbc-4.2</feature>
+        
+        <!-- Monitoring -->
+        <feature>monitor-1.0</feature>
+        <feature>mpMetrics-2.3</feature>
+        <feature>mpHealth-2.2</feature>
+    </featureManager>
+
+    <!-- HTTP Endpoint Configuration -->
+    <httpEndpoint id="defaultHttpEndpoint"
+                  host="*"
+                  httpPort="-1"
+                  httpsPort="9443">
+        <tcpOptions soReuseAddr="true"/>
+        <httpOptions maxKeepAliveRequests="1000"
+                     persistTimeout="30s"/>
+        <accessLogging filepath="${server.output.dir}/logs/http_access.log"
+                      logFormat='%h %u %t "%r" %s %b'
+                      maxFileSize="100"
+                      maxFiles="10"/>
+    </httpEndpoint>
+
+    <!-- Collective Member Configuration -->
+    <collectiveMember>
+        <controllerHost>controller.example.com</controllerHost>
+        <controllerHttpsPort>9443</controllerHttpsPort>
+    </collectiveMember>
+
+    <!-- Keystore Configuration -->
+    <keyStore id="defaultKeyStore" 
+              password="{xor}encoded_password"
+              type="PKCS12"/>
+
+    <!-- SSL Configuration -->
+    <ssl id="defaultSSLConfig" 
+         keyStoreRef="defaultKeyStore" 
+         trustStoreRef="defaultTrustStore"
+         sslProtocol="TLSv1.2"/>
+
+    <keyStore id="defaultTrustStore"
+              location="resources/security/trust.p12"
+              password="{xor}encoded_password"
+              type="PKCS12"/>
+
+    <!-- Thread Pool Configuration -->
+    <executor name="LibertyExecutor"
+              coreThreads="50"
+              maxThreads="100"
+              keepAlive="60s"/>
+
+    <!-- Database Configuration Example -->
+    <dataSource id="DefaultDataSource" jndiName="jdbc/myDataSource">
+        <jdbcDriver libraryRef="DB2JCC4Lib"/>
+        <properties.db2.jcc 
+            databaseName="MYDB"
+            serverName="db.example.com"
+            portNumber="50000"
+            user="dbuser"
+            password="{xor}encoded_password"/>
+        <connectionManager maxPoolSize="50" 
+                          minPoolSize="10"
+                          connectionTimeout="30s"/>
+    </dataSource>
+
+    <library id="DB2JCC4Lib">
+        <fileset dir="${shared.resource.dir}/db2" includes="*.jar"/>
+    </library>
+
+    <!-- Logging Configuration -->
+    <logging traceSpecification="*=info:com.ibm.ws.collective.*=fine"
+             maxFileSize="50"
+             maxFiles="20"
+             traceFormat="ENHANCED"
+             consoleLogLevel="INFO"/>
+
+    <!-- Monitoring -->
+    <monitor filter="JVM,ThreadPool,WebContainer,Session,ConnectionPool"/>
+
+    <!-- Health Check -->
+    <mpHealth>
+        <readinessCheck>
+            <check name="database" />
+        </readinessCheck>
+    </mpHealth>
+
+</server>
+
+<!-- ========================================================================
+     CONFIGURATION NOTES AND BEST PRACTICES
+     ======================================================================== -->
+
+<!--
+    PASSWORD ENCODING
+    
+    Use securityUtility to encode passwords:
+    
+    $WLP_HOME/bin/securityUtility encode myPassword
+    
+    Replace plain text passwords with encoded values:
+    password="{xor}encoded_value"
+    
+    For stronger encryption, use AES:
+    $WLP_HOME/bin/securityUtility encode --encoding=aes myPassword
+    password="{aes}encoded_value"
+-->
+
+<!--
+    CERTIFICATE MANAGEMENT
+    
+    Generate SSL certificates:
+    
+    $WLP_HOME/bin/securityUtility createSSLCertificate \
+      --server=myServer \
+      --password=myPassword \
+      --validity=365
+    
+    Import certificates to trust store:
+    
+    keytool -import -alias controllerCert \
+      -keystore trust.p12 \
+      -storepass myPassword \
+      -file controller.cer \
+      -storetype PKCS12 \
+      -noprompt
+-->
+
+<!--
+    COLLECTIVE SETUP COMMANDS
+    
+    1. Create controller:
+    $WLP_HOME/bin/collective create controller1 \
+      --keystorePassword=myPassword \
+      --createConfigFile=controller1
+    
+    2. Join member to collective:
+    $WLP_HOME/bin/collective join member1 \
+      --host=controller.example.com \
+      --port=9443 \
+      --user=admin \
+      --password=adminPassword \
+      --keystorePassword=myPassword
+    
+    3. List collective members:
+    $WLP_HOME/bin/collective list controller1 \
+      --user=admin \
+      --password=adminPassword
+    
+    4. Remove member from collective:
+    $WLP_HOME/bin/collective remove controller1 \
+      --host=member.example.com \
+      --server=member1 \
+      --user=admin \
+      --password=adminPassword
+-->
+
+<!--
+    PERFORMANCE TUNING GUIDELINES
+    
+    1. Thread Pool Sizing:
+       - coreThreads: 2 * number of CPU cores
+       - maxThreads: 4 * number of CPU cores
+       - Adjust based on workload
+    
+    2. Connection Pool Sizing:
+       - minPoolSize: 10-20 for typical workloads
+       - maxPoolSize: 50-100 for high traffic
+       - Monitor and adjust based on usage
+    
+    3. JVM Heap Settings (jvm.options):
+       -Xms512m
+       -Xmx2048m
+       -XX:MaxMetaspaceSize=512m
+    
+    4. Timeout Settings:
+       - Collective timeout: 300s (5 minutes)
+       - Connection timeout: 30s
+       - HTTP persist timeout: 30s
+-->
+
+<!--
+    SECURITY BEST PRACTICES
+    
+    1. Disable HTTP port in production (httpPort="-1")
+    2. Use strong passwords and encode them
+    3. Enable SSL/TLS 1.2 or higher only
+    4. Implement LDAP for user management
+    5. Use certificate-based authentication where possible
+    6. Regularly rotate certificates (before expiration)
+    7. Implement proper role-based access control
+    8. Enable audit logging for security events
+    9. Keep Liberty updated with latest fixes
+    10. Follow principle of least privilege
+-->
+
+<!--
+    MONITORING AND LOGGING
+    
+    1. Enable appropriate trace levels:
+       - Production: *=info
+       - Troubleshooting: *=info:com.ibm.ws.collective.*=fine
+       - Debug: *=fine (use sparingly)
+    
+    2. Configure log rotation:
+       - maxFileSize: 20-50 MB
+       - maxFiles: 10-20 files
+    
+    3. Enable access logging for HTTP traffic
+    
+    4. Use monitoring features:
+       - monitor-1.0 for basic metrics
+       - mpMetrics for MicroProfile metrics
+       - mpHealth for health checks
+    
+    5. Integrate with external monitoring tools
+-->
+
+<!--
+    HIGH AVAILABILITY CONSIDERATIONS
+    
+    1. Deploy multiple controllers for redundancy
+    2. Use load balancer for controller access
+    3. Implement proper backup and recovery procedures
+    4. Monitor certificate expiration dates
+    5. Test failover scenarios regularly
+    6. Document recovery procedures
+    7. Maintain configuration backups
+    8. Use shared file systems for shared resources
+-->
+
+<!--
+    TROUBLESHOOTING TIPS
+    
+    1. Check server status:
+       $WLP_HOME/bin/server status myServer
+    
+    2. View recent logs:
+       tail -f $WLP_HOME/usr/servers/myServer/logs/messages.log
+    
+    3. Enable trace for specific components:
+       <logging traceSpecification="com.ibm.ws.collective.*=all"/>
+    
+    4. Collect server dump:
+       $WLP_HOME/bin/server dump myServer --include=heap,thread,system
+    
+    5. Test connectivity:
+       curl -k https://controller:9443/ibm/api/collective/v1/status
+    
+    6. Verify certificates:
+       keytool -list -v -keystore key.p12 -storepass myPassword
+-->
+
+<!-- End of Configuration Templates -->
+
+
