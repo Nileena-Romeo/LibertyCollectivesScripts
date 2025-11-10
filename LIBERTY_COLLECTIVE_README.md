@@ -17,7 +17,7 @@ This collection provides comprehensive tools and documentation for troubleshooti
 
 ### Prerequisites
 
-- WebSphere Liberty 8.5.5 or later
+- WebSphere Liberty
 - Python 3.6+ (for Python diagnostics tool)
 - Bash shell (for shell script)
 - Administrative access to Liberty servers
